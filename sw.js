@@ -1,5 +1,5 @@
-const CACHE = 'mariscal-shop-v1';
-const FILES = ['./', './index.html', './styles.css', './app.js', './products.js', './manifest.webmanifest', './assets/icon.svg'];
+const CACHE = 'mariscal-shop-v2';
+const FILES = ['./', './index.html', './styles.css', './app.js', './products.js', './backend.js', './firebase-config.js', './manifest.webmanifest', './assets/icon.svg'];
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(FILES)));
@@ -12,7 +12,7 @@ self.addEventListener('activate', e => {
 });
 
 self.addEventListener('fetch', e => {
-  if (e.request.method !== 'GET') return;
+  if (e.request.method !== 'GET' || new URL(e.request.url).origin !== location.origin) return;
   e.respondWith(
     fetch(e.request)
       .then(res => {

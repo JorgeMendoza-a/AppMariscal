@@ -9,8 +9,6 @@ window.STORE_CONFIG = {
   whatsapp: '593900000000',
   currency: 'USD',
   currencySymbol: '$',
-  // PIN para entrar al panel de administración (cámbialo)
-  adminPin: '2026',
   // Costo de entrega dentro del colegio (0 = gratis)
   deliveryFee: 0,
   // Pedidos sobre este monto tienen un regalo / mensaje especial
@@ -27,8 +25,8 @@ window.CATEGORIES = [
   { id: 'combos', name: 'Combos', icon: '🎒' },
 ];
 
-// Productos iniciales. Desde el panel Admin se pueden agregar/editar
-// (los cambios se guardan en el dispositivo).
+// Catálogo inicial. Con Firebase, el administrador lo carga una sola vez
+// desde Admin → Productos → "Cargar catálogo inicial" y luego lo edita ahí.
 window.DEFAULT_PRODUCTS = [
   { id: 'p1', name: 'Pluma azul BIC Cristal', cat: 'escritura', price: 0.35, oldPrice: 0.45, emoji: '🖊️', stock: 120, rating: 4.8, sold: 540, desc: 'Pluma de punta media 1.0 mm, tinta azul de secado rápido.' },
   { id: 'p2', name: 'Pluma roja BIC Cristal', cat: 'escritura', price: 0.35, emoji: '🖊️', stock: 80, rating: 4.7, sold: 310, desc: 'Ideal para correcciones y subrayados.' },

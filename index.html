@@ -23,7 +23,10 @@
           <small id="schoolName"></small>
         </div>
       </a>
-      <a href="#/admin" class="icon-btn" aria-label="Administración" title="Administración">⚙️</a>
+      <div class="top-actions">
+        <a href="#/admin" class="icon-btn" id="adminBtn" aria-label="Administración" title="Administración" hidden>⚙️</a>
+        <a href="#/cuenta" class="icon-btn avatar-btn" id="accountBtn" aria-label="Mi cuenta" title="Mi cuenta">?</a>
+      </div>
     </div>
     <form class="search" id="searchForm" role="search">
       <span aria-hidden="true">🔍</span>
@@ -48,6 +51,7 @@
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
 
   <script src="products.js"></script>
-  <script src="app.js"></script>
+  <script src="firebase-config.js"></script>
+  <script type="module" src="app.js"></script>
 </body>
 </html>

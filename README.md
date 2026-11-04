@@ -6,24 +6,41 @@ Tienda en línea (estilo Temu / Amazon) para el multiservicios de la
 Estudiantes, padres y docentes piden útiles escolares desde el celular y el pedido
 llega al negocio por **WhatsApp**.
 
+## 👥 Cuentas y permisos
+
+Al abrir la app **todos deben iniciar sesión** (o crear su cuenta).
+
+| | Cliente (estudiante, representante, docente) | Administrador |
+|---|:---:|:---:|
+| Ver productos, buscar, favoritos | ✅ | ✅ |
+| Carrito y hacer pedidos | ✅ | ✅ |
+| Ver **sus** pedidos y su estado en vivo | ✅ | ✅ |
+| Cancelar un pedido mientras está pendiente | ✅ | ✅ |
+| Crear / editar / eliminar productos, precios, stock y fotos | ❌ | ✅ |
+| Ver **todos** los pedidos y cambiar su estado | ❌ | ✅ |
+| Dar o quitar permisos de administrador | ❌ | ✅ |
+| Ajustes de la tienda (WhatsApp, costo de entrega) | ❌ | ✅ |
+
+- Toda cuenta nueva es **cliente**. Solo un administrador puede convertir a alguien en administrador
+  (⚙️ → Usuarios → *Hacer admin*).
+- Los permisos no solo se ocultan en la pantalla: las **reglas de seguridad de Firebase**
+  (`firestore.rules`) impiden en el servidor que un cliente modifique productos o pedidos ajenos.
+
 ## ✨ Funciones
 
-**Para los clientes**
-- Inicio con ofertas, combos por nivel (Inicial, Básica, Bachillerato) y lo más vendido
-- Categorías: escritura, cuadernos, arte, geometría, oficina, servicios (copias, impresiones, anillado) y combos
-- Buscador (sin importar tildes) y ordenar por precio, ventas o calificación
-- Detalle de producto con descuentos, stock y productos relacionados
-- Carrito con cantidades, ahorro total y meta de "regalo sorpresa"
-- Checkout: nombre, curso, paralelo, celular, **retiro en tienda o entrega en el aula**, efectivo o transferencia
-- El pedido se envía por WhatsApp al negocio con todo el detalle
-- "Mis pedidos" con estado y botón **Volver a pedir**
-- Se puede **instalar en el celular** como app (PWA) y funciona sin internet para ver el catálogo
+**Clientes**
+- Inicio con ofertas, combos por nivel y lo más vendido; categorías y buscador
+- Carrito, retiro en tienda o **entrega en el aula**, efectivo o transferencia
+- El pedido llega al instante al panel del negocio (y opcionalmente por WhatsApp)
+- Aviso cuando el pedido cambia de estado: pendiente → preparando → listo → entregado
+- Mi cuenta: editar nombre, curso, paralelo y celular; recuperar contraseña por correo
 
-**Para el negocio (⚙️ arriba a la derecha, PIN inicial `2026`)**
-- Agregar, editar y eliminar productos (con foto desde el celular)
-- Control de stock (se descuenta solo con cada pedido)
-- Ver pedidos y cambiar su estado: pendiente → preparando → listo → entregado / cancelado
-- Ajustes: nombre del negocio, número de WhatsApp, costo de entrega, PIN
+**Administradores (botón ⚙️)**
+- Pedidos en tiempo real con aviso 🔔 de pedido nuevo; botón para escribir al cliente por WhatsApp
+- El stock se descuenta al aceptar el pedido y se devuelve si se cancela
+- Productos: crear, editar, eliminar, foto desde el celular, ofertas
+- Usuarios: dar o quitar rol de administrador
+- Ajustes del negocio
 
 ## 🚀 Cómo probarla
 
@@ -39,12 +56,27 @@ python3 -m http.server 8080
 2. Source: *Deploy from a branch* → elige la rama y la carpeta `/ (root)`
 3. Comparte el enlace `https://<usuario>.github.io/AppMariscal/` con la comunidad educativa
 
-## ⚙️ Configuración
+## 🔥 Configurar Firebase (para usarla de verdad)
 
-Edita `products.js`:
-- `STORE_CONFIG.whatsapp` → **pon aquí el número real del negocio** (ej. `593991234567`)
-- `STORE_CONFIG.adminPin` → cambia el PIN
-- `DEFAULT_PRODUCTS` → precios y productos iniciales
+Sin Firebase la app funciona en **modo demo**: las cuentas viven solo en ese dispositivo.
+Administrador de prueba: `admin@mariscal.edu` / `Mariscal2026`.
+
+Para que todos compartan el mismo catálogo y pedidos (gratis en el plan Spark):
+
+1. Entra a <https://console.firebase.google.com> → **Agregar proyecto** (ej. `mariscal-shop`).
+2. **Authentication** → *Comenzar* → *Sign-in method* → activa **Correo electrónico/contraseña**.
+3. **Firestore Database** → *Crear base de datos* → modo **producción** → región cercana (ej. `southamerica-east1`).
+4. Firestore → pestaña **Reglas** → pega el contenido de [`firestore.rules`](firestore.rules) → **Publicar**.
+5. ⚙️ *Configuración del proyecto* → *Tus apps* → ícono **Web `</>`** → registra la app y copia el objeto
+   `firebaseConfig` dentro de [`firebase-config.js`](firebase-config.js) (reemplazando `null`).
+6. Si la publicas en GitHub Pages: Authentication → *Configuración* → **Dominios autorizados** →
+   agrega `<usuario>.github.io`.
+7. **Crea el primer administrador:**
+   - Abre la app y regístrate normalmente con tu correo.
+   - En Firestore → colección `users` → abre tu documento → cambia `role` de `student` a **`admin`**.
+   - Recarga la app: aparecerá el botón ⚙️. Desde ahí puedes nombrar a otros administradores.
+8. En ⚙️ → **Productos** pulsa **📥 Cargar catálogo inicial** y luego ajusta precios y stock.
+9. En ⚙️ → **Ajustes** pon el número de WhatsApp real del negocio.
 
 ## 📁 Estructura
 
@@ -52,16 +84,15 @@ Edita `products.js`:
 |---|---|
 | `index.html` | Estructura de la app |
 | `styles.css` | Diseño con los colores del colegio |
-| `app.js` | Lógica: catálogo, carrito, pedidos, admin |
-| `products.js` | Configuración del negocio y catálogo |
-| `manifest.webmanifest`, `sw.js` | App instalable y modo sin conexión |
+| `app.js` | Pantallas: acceso, tienda, carrito, pedidos, cuenta, administración |
+| `backend.js` | Datos: Firebase (Auth + Firestore) o modo demo local |
+| `firebase-config.js` | Credenciales de tu proyecto Firebase |
+| `firestore.rules` | Reglas de seguridad (quién puede leer/escribir qué) |
+| `products.js` | Datos del negocio, categorías y catálogo inicial |
+| `manifest.webmanifest`, `sw.js` | App instalable |
 
-## ⚠️ Limitaciones actuales y siguiente paso
-
-Esta versión guarda los datos **en cada dispositivo** (localStorage). Por eso:
-- Los pedidos le llegan al negocio por **WhatsApp**. El panel admin solo ve los pedidos hechos en ese mismo dispositivo.
-- Los productos que cambie el administrador solo se ven en su dispositivo. Para que todos vean
-  los cambios hay que editar `products.js` y volver a publicar.
-
-**Siguiente paso recomendado:** conectar una base de datos en la nube (por ejemplo Firebase o Supabase)
-para tener catálogo compartido, pedidos en tiempo real, cuentas de usuario y pagos en línea.
+## 🛣️ Ideas para después
+- Pagos en línea (PayPhone / DeUna / tarjeta)
+- Notificaciones push cuando el pedido esté listo
+- Reportes de ventas por semana y productos más vendidos
+- Lista de útiles por curso para comprar todo con un toque

@@ -44,6 +44,8 @@ main { max-width: 1100px; margin: 0 auto; padding: 12px 16px; outline: none; }
 .brand-logo { width: 42px; height: 42px; border-radius: 12px; border: 2px solid var(--gold); }
 .brand strong { display: block; font-size: 1.05rem; line-height: 1.1; }
 .brand small { display: block; font-size: .72rem; color: var(--gold); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.top-actions { display: flex; gap: 8px; }
+.icon-btn[hidden] { display: none; }
 .icon-btn { font-size: 1.3rem; width: 42px; height: 42px; display: grid; place-items: center; border-radius: 12px; background: rgba(255,255,255,.12); }
 .search {
   max-width: 1100px; margin: 10px auto 0;
@@ -276,3 +278,55 @@ h2.section a { font-size: .8rem; color: var(--green-700); font-weight: 600; }
 
 footer.foot { text-align: center; color: var(--muted); font-size: .75rem; padding: 28px 0 8px; }
 footer.foot b { color: var(--green-700); }
+
+/* ---------- Cuenta / acceso ---------- */
+.avatar-btn { background: var(--gold); color: var(--green-900); font-weight: 800; font-size: 1.1rem; border-radius: 50%; }
+.icon-btn { position: relative; }
+.icon-btn.has-dot::after { content: ''; position: absolute; top: 6px; right: 6px; width: 10px; height: 10px; border-radius: 50%; background: var(--red); border: 2px solid var(--green-700); }
+body.auth .topbar, body.auth .bottomnav, body.loading .topbar .search, body.loading .bottomnav, body.loading .top-actions { display: none; }
+body.auth { padding-bottom: 0; background: linear-gradient(160deg, var(--green-900), var(--green-700) 45%, var(--green-500)); min-height: 100vh; }
+body.busy { cursor: progress; }
+body.busy .btn, body.busy .add-btn { opacity: .7; pointer-events: none; }
+.auth-wrap { max-width: 420px; margin: 0 auto; padding: calc(24px + env(safe-area-inset-top)) 0 24px; }
+.auth-brand { text-align: center; color: var(--white); margin-bottom: 18px; }
+.auth-brand img { border-radius: 22px; border: 3px solid var(--gold); box-shadow: 0 8px 24px rgba(0,0,0,.25); }
+.auth-brand h1 { margin: 12px 0 2px; font-size: 1.45rem; }
+.auth-brand p { margin: 0; color: var(--gold); font-weight: 600; font-size: .9rem; }
+.auth-card { border-top: 6px solid var(--gold); }
+.auth-card h2 { margin: 0 0 14px; font-size: 1.2rem; color: var(--green-700); }
+.auth-links { text-align: center; font-size: .85rem; margin: 16px 0 0; line-height: 1.9; }
+.auth-links a { color: var(--green-700); }
+.demo-note { background: rgba(255,255,255,.95); font-size: .78rem; line-height: 1.6; }
+.demo-note code { background: var(--green-100); padding: 1px 6px; border-radius: 6px; font-size: .78rem; }
+body.auth .foot { color: rgba(255,255,255,.85); }
+.spinner { width: 42px; height: 42px; margin: 0 auto 10px; border-radius: 50%; border: 4px solid var(--green-100); border-top-color: var(--green-700); animation: spin .8s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.who { display: flex; align-items: center; gap: 12px; padding-bottom: 12px; border-bottom: 1px solid #eef1ef; }
+.who .muted { font-size: .78rem; }
+.small-link { margin-left: auto; color: var(--green-700); font-weight: 600; font-size: .8rem; }
+.avatar { width: 40px; height: 40px; flex: 0 0 auto; border-radius: 50%; background: var(--green-700); color: var(--gold); display: grid; place-items: center; font-weight: 800; }
+.avatar.big { width: 56px; height: 56px; font-size: 1.4rem; }
+.role { display: inline-block; margin-top: 4px; font-size: .68rem; font-weight: 700; padding: 2px 8px; border-radius: 999px; background: var(--green-100); color: var(--green-700); }
+.role.admin { background: var(--gold); color: var(--green-900); }
+.summary .row.save { color: var(--green-500); }
+.pill { background: var(--red); color: #fff; border-radius: 999px; padding: 0 7px; font-size: .7rem; margin-left: 4px; }
+.sub { font-size: .95rem; margin: 14px 0 8px; color: var(--green-700); cursor: pointer; }
+details summary { list-style: none; }
+details summary::before { content: '▸ '; }
+details[open] summary::before { content: '▾ '; }
+.order.is-new { border-left: 5px solid var(--gold); }
+.admin-row .e img { width: 40px; height: 40px; object-fit: cover; border-radius: 8px; }
+.admin-row .avatar { width: 36px; height: 36px; }
+.small-btns select { border: 2px solid var(--green-100); border-radius: 10px; padding: 5px 8px; background: var(--white); font-size: .8rem; }
+.low { color: var(--red); }
+
+/* Admin compacto en celular */
+.tabs { display: grid; grid-template-columns: repeat(4, 1fr); overflow: visible; }
+.tabs button { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 8px 4px; font-size: .74rem; border-radius: 14px; }
+.tabs button span { font-size: 1.15rem; position: relative; }
+.tabs .pill { position: absolute; top: -4px; right: -18px; font-size: .62rem; }
+.stats { grid-template-columns: repeat(4, 1fr); gap: 6px; }
+.stat { padding: 10px 6px; text-align: center; }
+.stat b { font-size: 1.05rem; }
+.stat small { font-size: .62rem; line-height: 1.2; display: block; }
