@@ -6,6 +6,9 @@ import { createBackend, errorText, DEMO_ADMIN } from './backend.js';
 // ------------------------------------------------------------------
 const CATS = window.CATEGORIES;
 const GRADES = ['Inicial 1', 'Inicial 2', '1ro EGB', '2do EGB', '3ro EGB', '4to EGB', '5to EGB', '6to EGB', '7mo EGB', '8vo EGB', '9no EGB', '10mo EGB', '1ro BGU', '2do BGU', '3ro BGU', 'Docente', 'Representante', 'Personal'];
+const APK_URL = 'https://github.com/JorgeMendoza-a/AppMariscal/releases/download/apk/MariscalShop.apk';
+const IN_APP = /MariscalShopApp/.test(navigator.userAgent);
+const IS_ANDROID = /Android/i.test(navigator.userAgent);
 const STATUSES = ['pendiente', 'preparando', 'listo', 'entregado'];
 const STATUS_LABEL = { pendiente: 'Pendiente', preparando: 'Preparando', listo: 'Listo para retirar', entregado: 'Entregado', cancelado: 'Cancelado' };
 
@@ -145,6 +148,7 @@ function authShell(inner) {
           🧪 <b>Modo demo</b> (sin Firebase): las cuentas se guardan solo en este dispositivo.<br>
           Administrador de prueba: <code>${DEMO_ADMIN.email}</code> / <code>${DEMO_ADMIN.password}</code>
         </div>` : ''}
+      ${IS_ANDROID && !IN_APP ? `<a class="btn apk-btn block" href="${APK_URL}">📲 Descargar app para Android</a>` : ''}
       <p class="foot"><em>${esc(config.slogan)}</em></p>
     </div>`;
 }
@@ -414,6 +418,8 @@ function viewAccount() {
     </div>
     <div class="card" style="margin-top:12px;display:grid;gap:8px">
       <a href="#/favoritos" class="btn ghost block">💚 Mis favoritos</a>
+      ${!IN_APP ? `<a href="${APK_URL}" class="btn ghost block">📲 Descargar app para Android</a>
+        <p class="muted" style="font-size:.72rem;margin:0;text-align:center">Comparte este enlace con estudiantes y padres:<br><code style="word-break:break-all">${APK_URL}</code></p>` : ''}
       ${isAdmin() ? `<a href="#/admin" class="btn ghost block">⚙️ Administración</a>` : ''}
       <button class="btn danger block" data-logout>Cerrar sesión</button>
     </div>

@@ -330,3 +330,6 @@ details[open] summary::before { content: '▾ '; }
 .stat { padding: 10px 6px; text-align: center; }
 .stat b { font-size: 1.05rem; }
 .stat small { font-size: .62rem; line-height: 1.2; display: block; }
+
+.apk-btn { margin-top: 14px; background: var(--gold); color: var(--green-900); box-shadow: 0 6px 18px rgba(0,0,0,.2); }
+.apk-btn:hover { background: var(--gold-dark); }

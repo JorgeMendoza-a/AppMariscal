@@ -78,6 +78,24 @@ Para que todos compartan el mismo catálogo y pedidos (gratis en el plan Spark):
 8. En ⚙️ → **Productos** pulsa **📥 Cargar catálogo inicial** y luego ajusta precios y stock.
 9. En ⚙️ → **Ajustes** pon el número de WhatsApp real del negocio.
 
+## 📲 App Android (APK)
+
+Cada vez que cambia algo en `android/`, **GitHub Actions** compila la APK y la publica en
+*Releases*. Enlace fijo de descarga:
+
+**https://github.com/JorgeMendoza-a/AppMariscal/releases/download/apk/MariscalShop.apk**
+
+- La app Android abre la tienda publicada en GitHub Pages, así que **los cambios de la tienda
+  llegan solos**, sin reinstalar la APK.
+- En la tienda hay un botón **"📲 Descargar app para Android"** (inicio de sesión en Android y *Mi cuenta*).
+- Recompilar a mano: pestaña **Actions → Construir APK Android → Run workflow**.
+- Para instalar, Android pedirá permitir "Instalar apps desconocidas".
+- **Firma:** sin configurar nada, la APK se firma con una clave de prueba distinta en cada
+  compilación (para actualizar la APK habría que desinstalar primero). Para una firma fija
+  (necesaria para Google Play) guarda en GitHub → *Settings → Secrets and variables → Actions*:
+  `ANDROID_KEYSTORE_BASE64` (archivo .keystore en base64), `KEYSTORE_PASSWORD`, `KEY_PASSWORD`
+  y `KEY_ALIAS`. **Nunca subas el archivo .keystore al repositorio.**
+
 ## 📁 Estructura
 
 | Archivo | Qué contiene |
@@ -89,7 +107,8 @@ Para que todos compartan el mismo catálogo y pedidos (gratis en el plan Spark):
 | `firebase-config.js` | Credenciales de tu proyecto Firebase |
 | `firestore.rules` | Reglas de seguridad (quién puede leer/escribir qué) |
 | `products.js` | Datos del negocio, categorías y catálogo inicial |
-| `manifest.webmanifest`, `sw.js` | App instalable |
+| `manifest.webmanifest`, `sw.js` | App web instalable |
+| `android/`, `.github/workflows/android.yml` | App Android y su compilación automática |
 
 ## 🛣️ Ideas para después
 - Pagos en línea (PayPhone / DeUna / tarjeta)

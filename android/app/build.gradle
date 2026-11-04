@@ -1,0 +1,55 @@
+plugins {
+    id 'com.android.application'
+}
+
+// Cada compilación en GitHub Actions sube el número de versión automáticamente
+def buildNumber = (System.getenv('GITHUB_RUN_NUMBER') ?: '1').toInteger()
+
+android {
+    namespace 'ec.edu.mariscal.shop'
+    compileSdk 34
+
+    defaultConfig {
+        applicationId 'ec.edu.mariscal.shop'
+        minSdk 24
+        targetSdk 34
+        versionCode buildNumber
+        versionName "1.0.${buildNumber}"
+        // Dirección donde está publicada la tienda (GitHub Pages)
+        buildConfigField 'String', 'STORE_URL', '"https://jorgemendoza-a.github.io/AppMariscal/"'
+    }
+
+    buildFeatures {
+        buildConfig true
+    }
+
+    // La firma privada NO se guarda en el repositorio. GitHub Actions la crea desde
+    // los secrets ANDROID_KEYSTORE_BASE64, KEYSTORE_PASSWORD y KEY_PASSWORD.
+    // Si no existen, la APK se firma con una clave de depuración (sirve para instalar
+    // y probar, pero cada compilación tiene una firma distinta).
+    def keystoreFile = file('release.keystore')
+    def hasReleaseKey = keystoreFile.exists() && System.getenv('KEYSTORE_PASSWORD')
+
+    signingConfigs {
+        if (hasReleaseKey) {
+            release {
+                storeFile keystoreFile
+                storePassword System.getenv('KEYSTORE_PASSWORD')
+                keyAlias System.getenv('KEY_ALIAS') ?: 'mariscal'
+                keyPassword System.getenv('KEY_PASSWORD') ?: System.getenv('KEYSTORE_PASSWORD')
+            }
+        }
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            signingConfig hasReleaseKey ? signingConfigs.release : signingConfigs.debug
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+}

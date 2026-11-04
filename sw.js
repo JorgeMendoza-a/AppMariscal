@@ -1,4 +1,4 @@
-const CACHE = 'mariscal-shop-v2';
+const CACHE = 'mariscal-shop-v3';
 const FILES = ['./', './index.html', './styles.css', './app.js', './products.js', './backend.js', './firebase-config.js', './manifest.webmanifest', './assets/icon.svg'];
 
 self.addEventListener('install', e => {
