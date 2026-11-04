@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <rect width="512" height="512" rx="110" fill="#0b6b2e"/>
+  <circle cx="256" cy="256" r="196" fill="none" stroke="#f5c400" stroke-width="18"/>
+  <path d="M256 120 110 190l146 70 146-70z" fill="#f5c400"/>
+  <path d="M170 225v70c0 30 40 55 86 55s86-25 86-55v-70l-86 41z" fill="#ffffff"/>
+  <rect x="384" y="190" width="12" height="90" fill="#f5c400"/>
+  <circle cx="390" cy="290" r="14" fill="#f5c400"/>
+  <text x="256" y="430" text-anchor="middle" font-family="Arial, sans-serif" font-weight="900" font-size="64" fill="#ffffff">MA</text>
+</svg>

@@ -1,0 +1,14 @@
+{
+  "name": "Multiservicios Mariscal",
+  "short_name": "Mariscal Shop",
+  "description": "Tienda de útiles escolares de la U.E. Mariscal de Ayacucho",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#0b6b2e",
+  "lang": "es",
+  "icons": [
+    { "src": "assets/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}

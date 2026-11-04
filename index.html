@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#0b6b2e">
+  <meta name="description" content="Tienda de útiles escolares de la U.E. Mariscal de Ayacucho">
+  <title>Mariscal Shop</title>
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="assets/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="assets/icon.svg">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar-row">
+      <a href="#/" class="brand" aria-label="Inicio">
+        <img src="assets/icon.svg" alt="" class="brand-logo">
+        <div>
+          <strong id="storeName">Mariscal Shop</strong>
+          <small id="schoolName"></small>
+        </div>
+      </a>
+      <a href="#/admin" class="icon-btn" aria-label="Administración" title="Administración">⚙️</a>
+    </div>
+    <form class="search" id="searchForm" role="search">
+      <span aria-hidden="true">🔍</span>
+      <input id="searchInput" type="search" placeholder="Buscar plumas, cuadernos, copias…" autocomplete="off">
+    </form>
+  </header>
+
+  <main id="app" tabindex="-1"></main>
+
+  <nav class="bottomnav" aria-label="Navegación principal">
+    <a href="#/" data-nav="home"><span>🏠</span>Inicio</a>
+    <a href="#/categorias" data-nav="categorias"><span>🗂️</span>Categorías</a>
+    <a href="#/carrito" data-nav="carrito"><span class="cart-icon">🛒<b id="cartBadge" hidden>0</b></span>Carrito</a>
+    <a href="#/pedidos" data-nav="pedidos"><span>📦</span>Pedidos</a>
+  </nav>
+
+  <div id="modal" class="modal" hidden>
+    <div class="modal-backdrop" data-close></div>
+    <div class="modal-sheet" role="dialog" aria-modal="true" id="modalContent"></div>
+  </div>
+
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+  <script src="products.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
