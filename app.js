@@ -596,14 +596,30 @@ async function askNotifications() {
     if ('Notification' in window && Notification.permission === 'default') {
       await Notification.requestPermission();
       render();
+      registerPush();
     }
   } catch { /* sin soporte */ }
 }
-window.onNotifPermission = () => render(); // la app Android avisa cuando el usuario responde
+window.onNotifPermission = () => { render(); registerPush(); }; // la app Android avisa cuando el usuario responde
+
+// Notificaciones push (llegan con la app cerrada): se registra el token del
+// dispositivo en la cuenta y una Cloud Function envía los avisos.
+let pushToken = null;
+async function registerPush() {
+  if (!user || api.mode !== 'firebase') return;
+  try {
+    let token = null;
+    if (bridge && bridge.getPushToken) token = bridge.getPushToken() || null;
+    else if (self.FIREBASE_VAPID_KEY && notifGranted()) token = await api.getWebPushToken(self.FIREBASE_VAPID_KEY);
+    pushToken = token;
+    if (token && !(user.fcmTokens || []).includes(token)) await api.addPushToken(token);
+  } catch (e) { console.warn('No se pudo activar push', e); }
+}
+window.onPushToken = () => registerPush(); // la app Android avisa cuando obtiene su token
 
 async function systemNotify(title, body, tag) {
   try {
-    if (bridge) return bridge.notifyUser(title, body);
+    if (bridge) return bridge.notifyUser(title, body, tag || '');
     if (!notifGranted()) return;
     const reg = 'serviceWorker' in navigator ? await navigator.serviceWorker.getRegistration() : null;
     const opts = { body, icon: 'assets/icon-192.png', badge: 'assets/icon-192.png', tag, renotify: true, vibrate: [300, 100, 300], data: { url: location.href.split('#')[0] + '#/pedidos' } };
@@ -938,6 +954,7 @@ function onAuthChange(u) {
     if (u.uid !== prevUid) {
       cart = local.get(cartKey(), []);
       favorites = local.get('ms_favs_' + u.uid, []);
+      setTimeout(registerPush, 0); // después de asignar user
     }
     if (!isAdmin() && route().name === 'admin') history.replaceState(null, '', '#/');
     startData();
@@ -1002,7 +1019,14 @@ document.addEventListener('click', async e => {
     const msg = d.to === 'admin' ? `¿Dar permisos de administrador a ${u.name}? Podrá modificar productos y pedidos.` : `¿Quitar permisos de administrador a ${u.name}?`;
     if (confirm(msg)) run(() => api.setRole(d.role, d.to), 'Permisos actualizados');
   }
-  else if ('logout' in d) { if (confirm('¿Cerrar sesión?')) run(() => api.logout()); }
+  else if ('logout' in d) {
+    if (confirm('¿Cerrar sesión?')) run(async () => {
+      // Este celular deja de recibir avisos de esta cuenta
+      if (pushToken) await api.removePushToken(pushToken).catch(() => {});
+      pushToken = null;
+      await api.logout();
+    });
+  }
 });
 
 document.addEventListener('change', e => {

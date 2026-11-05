@@ -2,6 +2,12 @@ plugins {
     id 'com.android.application'
 }
 
+// Notificaciones push: se activa cuando existe app/google-services.json
+// (se descarga de Firebase Console al registrar la app Android).
+if (file('google-services.json').exists()) {
+    apply plugin: 'com.google.gms.google-services'
+}
+
 // Cada compilación en GitHub Actions sube el número de versión automáticamente
 def buildNumber = (System.getenv('GITHUB_RUN_NUMBER') ?: '1').toInteger()
 
@@ -52,4 +58,9 @@ android {
         sourceCompatibility JavaVersion.VERSION_17
         targetCompatibility JavaVersion.VERSION_17
     }
+}
+
+dependencies {
+    implementation platform('com.google.firebase:firebase-bom:33.5.1')
+    implementation 'com.google.firebase:firebase-messaging'
 }

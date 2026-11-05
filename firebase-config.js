@@ -8,7 +8,7 @@
 //  pedidos se guardan solo en el dispositivo (sirve para probar).
 //  Estos datos NO son secretos; la seguridad la dan las reglas (firestore.rules).
 // =====================================================================
-window.FIREBASE_CONFIG = {
+self.FIREBASE_CONFIG = {
   apiKey: "AIzaSyARDPQpoy7g3e0LGILlR35DiYA54GONAHQ",
   authDomain: "mariscal-shop.firebaseapp.com",
   projectId: "mariscal-shop",
@@ -17,6 +17,11 @@ window.FIREBASE_CONFIG = {
   appId: "1:401767664262:web:39cfa69137f79e9d91df07",
   measurementId: "G-960004LCXY"
 };
+
+// Clave pública para notificaciones push en el navegador (no es secreta).
+// Firebase Console → Configuración del proyecto → Cloud Messaging →
+// "Certificados push web" → Generar par de claves → copiar la clave aquí.
+self.FIREBASE_VAPID_KEY = null;
 
 /* Ejemplo:
 window.FIREBASE_CONFIG = {

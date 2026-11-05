@@ -3,12 +3,6 @@ package ec.edu.mariscal.shop;
 import android.annotation.SuppressLint;
 import android.Manifest;
 import android.app.Activity;
-import android.app.Notification;
-import android.app.NotificationChannel;
-import android.app.NotificationManager;
-import android.app.PendingIntent;
-import android.content.pm.PackageManager;
-import android.graphics.Color;
 import android.os.Build;
 import android.webkit.JavascriptInterface;
 import android.content.ActivityNotFoundException;
@@ -27,6 +21,9 @@ import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import android.widget.Toast;
 
+import com.google.firebase.FirebaseApp;
+import com.google.firebase.messaging.FirebaseMessaging;
+
 /**
  * Contenedor Android de la tienda web Mariscal Shop.
  * Carga la app publicada en GitHub Pages, así cualquier cambio en la web
@@ -36,9 +33,6 @@ public class MainActivity extends Activity {
 
     private static final int FILE_CHOOSER_REQUEST = 1001;
     private static final int NOTIF_PERMISSION_REQUEST = 1002;
-    private static final String CHANNEL_ID = "pedidos";
-    private static final String EXTRA_GOTO = "goto";
-    private int notificationId = 1;
     private WebView webView;
     private ValueCallback<Uri[]> fileCallback;
     private final String storeUrl = BuildConfig.STORE_URL;
@@ -98,10 +92,11 @@ public class MainActivity extends Activity {
             }
         });
 
-        createNotificationChannel();
+        Notifier.createChannel(this);
         webView.addJavascriptInterface(new Bridge(), "AndroidBridge");
+        fetchPushToken();
 
-        String target = getIntent().getStringExtra(EXTRA_GOTO);
+        String target = getIntent().getStringExtra(Notifier.EXTRA_GOTO);
         if (savedInstanceState != null) webView.restoreState(savedInstanceState);
         else webView.loadUrl(target != null ? storeUrl + target : storeUrl);
     }
@@ -109,53 +104,28 @@ public class MainActivity extends Activity {
     @Override
     protected void onNewIntent(Intent intent) {
         super.onNewIntent(intent);
-        String target = intent.getStringExtra(EXTRA_GOTO);
+        String target = intent.getStringExtra(Notifier.EXTRA_GOTO);
         if (target != null && webView != null) {
             webView.evaluateJavascript("location.hash='" + target.replace("'", "") + "'", null);
         }
     }
 
-    // ---------------- Notificaciones ----------------
+    // ---------------- Notificaciones push (Firebase) ----------------
 
-    private void createNotificationChannel() {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return;
-        NotificationChannel ch = new NotificationChannel(CHANNEL_ID, "Pedidos", NotificationManager.IMPORTANCE_HIGH);
-        ch.setDescription("Avisos cuando tu pedido está listo y pedidos nuevos");
-        ch.enableVibration(true);
-        ch.setVibrationPattern(new long[]{0, 300, 100, 300});
-        ch.enableLights(true);
-        ch.setLightColor(Color.GREEN);
-        getSystemService(NotificationManager.class).createNotificationChannel(ch);
-    }
-
-    private boolean notificationsAllowed() {
-        if (Build.VERSION.SDK_INT >= 33) {
-            return checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED;
+    /** Pide a Firebase el token de este celular y avisa a la web para que lo guarde. */
+    private void fetchPushToken() {
+        if (FirebaseApp.getApps(this).isEmpty()) return; // compilada sin google-services.json
+        try {
+            FirebaseMessaging.getInstance().getToken().addOnSuccessListener(token -> {
+                getSharedPreferences(PushService.PREFS, MODE_PRIVATE).edit()
+                        .putString(PushService.KEY_TOKEN, token).apply();
+                if (webView != null) {
+                    webView.evaluateJavascript("window.onPushToken&&window.onPushToken()", null);
+                }
+            });
+        } catch (Exception ignored) {
+            // Sin Google Play Services: quedan los avisos con la app abierta
         }
-        return getSystemService(NotificationManager.class).areNotificationsEnabled();
-    }
-
-    private void showNotification(String title, String body) {
-        if (!notificationsAllowed()) return;
-        Intent open = new Intent(this, MainActivity.class);
-        open.putExtra(EXTRA_GOTO, "#/pedidos");
-        open.addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP | Intent.FLAG_ACTIVITY_CLEAR_TOP);
-        PendingIntent pi = PendingIntent.getActivity(this, 0, open,
-                PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
-        Notification.Builder b = Build.VERSION.SDK_INT >= Build.VERSION_CODES.O
-                ? new Notification.Builder(this, CHANNEL_ID)
-                : new Notification.Builder(this);
-        b.setSmallIcon(R.drawable.ic_notification)
-                .setColor(Color.parseColor("#0b6b2e"))
-                .setContentTitle(title)
-                .setContentText(body)
-                .setStyle(new Notification.BigTextStyle().bigText(body))
-                .setAutoCancel(true)
-                .setContentIntent(pi);
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) {
-            b.setPriority(Notification.PRIORITY_HIGH).setDefaults(Notification.DEFAULT_ALL);
-        }
-        getSystemService(NotificationManager.class).notify(notificationId++, b.build());
     }
 
     @Override
@@ -170,12 +140,17 @@ public class MainActivity extends Activity {
     private class Bridge {
         @JavascriptInterface
         public void notifyUser(String title, String body) {
-            runOnUiThread(() -> showNotification(title, body));
+            notifyUser(title, body, null);
+        }
+
+        @JavascriptInterface
+        public void notifyUser(String title, String body, String tag) {
+            runOnUiThread(() -> Notifier.show(MainActivity.this, title, body, tag));
         }
 
         @JavascriptInterface
         public boolean hasPermission() {
-            return notificationsAllowed();
+            return Notifier.allowed(MainActivity.this);
         }
 
         @JavascriptInterface
@@ -184,6 +159,11 @@ public class MainActivity extends Activity {
                 runOnUiThread(() -> requestPermissions(
                         new String[]{Manifest.permission.POST_NOTIFICATIONS}, NOTIF_PERMISSION_REQUEST));
             }
+        }
+
+        @JavascriptInterface
+        public String getPushToken() {
+            return getSharedPreferences(PushService.PREFS, MODE_PRIVATE).getString(PushService.KEY_TOKEN, "");
         }
     }
 

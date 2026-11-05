@@ -1,4 +1,18 @@
-const CACHE = 'mariscal-shop-v4';
+// Notificaciones push con la app cerrada (Firebase Cloud Messaging).
+// Va al inicio para que Firebase registre sus eventos primero.
+try {
+  importScripts('./firebase-config.js');
+  if (self.FIREBASE_CONFIG && self.FIREBASE_VAPID_KEY) {
+    importScripts(
+      'https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js',
+      'https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging-compat.js'
+    );
+    firebase.initializeApp(self.FIREBASE_CONFIG);
+    firebase.messaging(); // muestra sola la notificación cuando la app está cerrada
+  }
+} catch (e) { /* sin push: la app sigue funcionando */ }
+
+const CACHE = 'mariscal-shop-v5';
 const FILES = ['./', './index.html', './styles.css', './app.js', './products.js', './backend.js', './firebase-config.js', './manifest.webmanifest', './assets/icon.svg'];
 
 self.addEventListener('install', e => {

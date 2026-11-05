@@ -123,6 +123,20 @@ async function createFirebaseBackend(cfg) {
     watchUsers: cb => F.onSnapshot(col('users'), s => cb(list(s).map(u => ({ uid: u.id, ...u }))), () => cb([])),
     setRole: (uid, role) => F.updateDoc(docRef('users', uid), { role }),
 
+    // Notificaciones push: cada dispositivo guarda su token en users/{uid}.fcmTokens
+    async addPushToken(token) {
+      if (current) await F.updateDoc(docRef('users', current.uid), { fcmTokens: F.arrayUnion(token) });
+    },
+    async removePushToken(token) {
+      if (current) await F.updateDoc(docRef('users', current.uid), { fcmTokens: F.arrayRemove(token) });
+    },
+    async getWebPushToken(vapidKey) {
+      const M = await import(`${base}/firebase-messaging.js`);
+      if (!(await M.isSupported())) return null;
+      const reg = await navigator.serviceWorker.ready;
+      return M.getToken(M.getMessaging(app), { vapidKey, serviceWorkerRegistration: reg });
+    },
+
     watchSettings: cb => F.onSnapshot(docRef('settings', 'store'), s => cb(s.exists() ? s.data() : {}), () => cb({})),
     saveSettings: patch => F.setDoc(docRef('settings', 'store'), patch, { merge: true }),
   };
@@ -240,6 +254,11 @@ async function createLocalBackend() {
       set(K.users, get(K.users, []).map(u => u.uid === id ? { ...u, role } : u));
       emit('users'); emit('auth');
     },
+
+    // En modo demo no hay servidor que envíe notificaciones push
+    async addPushToken() {},
+    async removePushToken() {},
+    async getWebPushToken() { return null; },
 
     watchSettings: cb => sub('settings', () => cb(get(K.settings, {}))),
     async saveSettings(patch) { requireAdmin(); set(K.settings, { ...get(K.settings, {}), ...patch }); emit('settings'); },

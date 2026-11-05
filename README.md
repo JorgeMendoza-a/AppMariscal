@@ -96,6 +96,27 @@ Cada vez que cambia algo en `android/`, **GitHub Actions** compila la APK y la p
   `ANDROID_KEYSTORE_BASE64` (archivo .keystore en base64), `KEYSTORE_PASSWORD`, `KEY_PASSWORD`
   y `KEY_ALIAS`. **Nunca subas el archivo .keystore al repositorio.**
 
+## 🔔 Notificaciones con la app cerrada
+
+Una **Cloud Function** (`functions/index.js`) envía notificaciones push con Firebase Cloud
+Messaging: al cliente cuando su pedido pasa a **Listo** y a los administradores cuando entra un
+**pedido nuevo**. Cada dispositivo guarda su token en `users/{uid}.fcmTokens`.
+
+Requisitos (una sola vez):
+1. Plan **Blaze** en Firebase (pide tarjeta; con el uso de un colegio el costo es $0).
+   Recomendado: crear una alerta de presupuesto de $1.
+2. **Android:** registrar la app Android (`ec.edu.mariscal.shop`) en Firebase y poner su
+   `google-services.json` en `android/app/`.
+3. **Navegador:** Cloud Messaging → *Certificados push web* → generar clave y ponerla en
+   `self.FIREBASE_VAPID_KEY` dentro de `firebase-config.js`.
+4. **Publicar la función** desde Google Cloud Shell:
+   ```bash
+   git clone -b claude/school-marketplace-app-nj259f https://github.com/JorgeMendoza-a/AppMariscal.git
+   cd AppMariscal/functions && npm install && cd ..
+   npx firebase-tools login --no-localhost
+   npx firebase-tools deploy --only functions --project mariscal-shop --force
+   ```
+
 ## 📁 Estructura
 
 | Archivo | Qué contiene |
@@ -105,6 +126,7 @@ Cada vez que cambia algo en `android/`, **GitHub Actions** compila la APK y la p
 | `app.js` | Pantallas: acceso, tienda, carrito, pedidos, cuenta, administración |
 | `backend.js` | Datos: Firebase (Auth + Firestore) o modo demo local |
 | `firebase-config.js` | Credenciales de tu proyecto Firebase |
+| `functions/` | Cloud Functions que envían las notificaciones push |
 | `firestore.rules` | Reglas de seguridad (quién puede leer/escribir qué) |
 | `products.js` | Datos del negocio, categorías y catálogo inicial |
 | `manifest.webmanifest`, `sw.js` | App web instalable |
