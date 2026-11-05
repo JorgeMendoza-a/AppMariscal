@@ -392,7 +392,9 @@ function viewOrders() {
       <p class="muted">Tus pedidos aparecerán aquí y verás cuando estén listos.</p><a href="#/" class="btn">Empezar a comprar</a></div>`;
   }
   const mine = isAdmin() ? orders.filter(o => o.uid === user.uid) : orders;
+  const hasOpen = mine.some(o => ['pendiente', 'preparando'].includes(o.status));
   return `<h2 class="section">Mis pedidos</h2>
+    ${hasOpen ? notifNotice('cuando tu pedido esté listo') : ''}
     ${isAdmin() ? `<div class="notice">Eres administrador: los pedidos de todos los clientes están en <a href="#/admin"><b>Administración</b></a>.</div>` : ''}
     ${mine.length ? mine.map(o => orderCard(o)).join('') : '<p class="muted">No has hecho pedidos con esta cuenta.</p>'}`;
 }
@@ -417,6 +419,9 @@ function viewAccount() {
       </form>
     </div>
     <div class="card" style="margin-top:12px;display:grid;gap:8px">
+      ${notifSupported() ? (notifGranted()
+        ? `<div class="notice" style="margin:0">🔔 Notificaciones activadas</div>`
+        : `<button class="btn ghost block" data-asknotif>🔔 Activar notificaciones</button>`) : ''}
       <a href="#/favoritos" class="btn ghost block">💚 Mis favoritos</a>
       ${!IN_APP ? `<a href="${APK_URL}" class="btn ghost block">📲 Descargar app para Android</a>
         <p class="muted" style="font-size:.72rem;margin:0;text-align:center">Comparte este enlace con estudiantes y padres:<br><code style="word-break:break-all">${APK_URL}</code></p>` : ''}
@@ -446,7 +451,7 @@ function viewAdmin() {
     const open = orders.filter(o => ['pendiente', 'preparando', 'listo'].includes(o.status));
     const closed = orders.filter(o => !['pendiente', 'preparando', 'listo'].includes(o.status));
     body = !orders.length ? `<p class="muted">Todavía no hay pedidos.</p>` : `
-      <h3 class="sub">Por atender (${open.length})</h3>
+      <h3 class="sub">En curso (${open.length})</h3>
       ${open.length ? open.map(o => orderCard(o, true)).join('') : '<p class="muted">¡Todo al día! 🎉</p>'}
       ${closed.length ? `<details><summary class="sub">Historial (${closed.length})</summary>${closed.map(o => orderCard(o, true)).join('')}</details>` : ''}`;
   } else if (adminTab === 'productos') {
@@ -495,6 +500,7 @@ function viewAdmin() {
   }
   return `
     <h2 class="section">⚙️ Administración</h2>
+    ${notifNotice('de cada pedido nuevo')}
     <div class="stats">
       <div class="stat"><b>${pending}</b><small>Por atender</small></div>
       <div class="stat"><b>${money(todaySales)}</b><small>Ventas de hoy</small></div>
@@ -573,16 +579,125 @@ function resizeImage(file, max) {
   });
 }
 
+// ------------------------------------------------------------------
+// Avisos: notificación del sistema, sonido, vibración y ventana
+// ------------------------------------------------------------------
+const bridge = window.AndroidBridge; // existe solo dentro de la app Android
+const notifiedNow = new Set();
+const readySeenKey = () => 'ms_ready_seen_' + user.uid;
+const notifSupported = () => !!bridge || ('Notification' in window && 'serviceWorker' in navigator);
+function notifGranted() {
+  try { return bridge ? bridge.hasPermission() : ('Notification' in window && Notification.permission === 'granted'); }
+  catch { return false; }
+}
+async function askNotifications() {
+  try {
+    if (bridge) { if (!bridge.hasPermission()) bridge.requestPermission(); return; }
+    if ('Notification' in window && Notification.permission === 'default') {
+      await Notification.requestPermission();
+      render();
+    }
+  } catch { /* sin soporte */ }
+}
+window.onNotifPermission = () => render(); // la app Android avisa cuando el usuario responde
+
+async function systemNotify(title, body, tag) {
+  try {
+    if (bridge) return bridge.notifyUser(title, body);
+    if (!notifGranted()) return;
+    const reg = 'serviceWorker' in navigator ? await navigator.serviceWorker.getRegistration() : null;
+    const opts = { body, icon: 'assets/icon-192.png', badge: 'assets/icon-192.png', tag, renotify: true, vibrate: [300, 100, 300], data: { url: location.href.split('#')[0] + '#/pedidos' } };
+    if (reg) await reg.showNotification(title, opts); else new Notification(title, opts);
+  } catch { /* sin soporte */ }
+}
+function alertSound() {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    [0, 0.22].forEach((t, i) => {
+      const o = ctx.createOscillator(), g = ctx.createGain();
+      o.frequency.value = i ? 1175 : 880;
+      o.connect(g); g.connect(ctx.destination);
+      g.gain.setValueAtTime(0.25, ctx.currentTime + t);
+      g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + t + 0.2);
+      o.start(ctx.currentTime + t); o.stop(ctx.currentTime + t + 0.2);
+    });
+  } catch { /* sin audio */ }
+  try { navigator.vibrate?.([300, 100, 300]); } catch { /* sin vibración */ }
+}
+
+const readyText = o => o.delivery === 'aula'
+  ? `Tu pedido #${o.code} está listo. En el recreo lo llevamos a tu aula.`
+  : `Tu pedido #${o.code} está listo. Acércate al multiservicios a retirarlo.`;
+
+function toIntlPhone(phone) {
+  const d = String(phone || '').replace(/\D/g, '');
+  if (d.startsWith('0')) return '593' + d.slice(1);
+  if (d.length === 9 && d.startsWith('9')) return '593' + d;
+  return d;
+}
+function readyWhatsApp(o) {
+  return [
+    `Hola ${o.customer.name} 👋`,
+    `✅ ${readyText(o)}`,
+    ...(o.pay === 'Efectivo' ? [`💵 Total a pagar: ${money(o.total)}`] : []),
+    `— ${config.name}`,
+  ].join('\n');
+}
+
+// Muestra el aviso de "pedido listo" hasta que el cliente toque "Entendido".
+// live = true cuando el cambio acaba de ocurrir (suena y llega notificación).
+function checkReady(live) {
+  if (!user) return;
+  const seen = local.get(readySeenKey(), []);
+  const ready = orders.filter(o => o.uid === user.uid && o.status === 'listo' && !seen.includes(o.id));
+  if (!ready.length) return;
+  const o = ready[0];
+  if (live && !notifiedNow.has(o.id)) {
+    notifiedNow.add(o.id);
+    systemNotify('✅ ¡Tu pedido está listo!', readyText(o), 'ready-' + o.id);
+    alertSound();
+  }
+  if (!$('#modal').hidden) return;
+  openModal(`
+    <div class="ready-modal">
+      <div class="ready-icon">🛍️</div>
+      <h3>¡Tu pedido está listo!</h3>
+      <p>${esc(readyText(o))}</p>
+      <div class="ready-items">${o.items.map(i => `${i.qty} × ${esc(i.name)}`).join('<br>')}</div>
+      ${o.pay === 'Efectivo' ? `<p>Total a pagar: <b class="price">${money(o.total)}</b></p>` : ''}
+      <button class="btn gold block" data-readyok="${esc(o.id)}">👍 Entendido, voy por él</button>
+    </div>`);
+}
+
+function notifNotice(text) {
+  if (!notifSupported() || notifGranted()) return '';
+  if (!bridge && Notification.permission === 'denied') {
+    return `<div class="notice">🔕 Las notificaciones están bloqueadas. Actívalas en los ajustes del navegador para enterarte ${text}.</div>`;
+  }
+  return `<div class="notice notif-notice">🔔 Activa las notificaciones para enterarte ${text}. <button class="btn" data-asknotif>Activar</button></div>`;
+}
+
 // El stock se descuenta cuando el administrador acepta el pedido
 // (pasa de "pendiente" a otro estado) y se devuelve si luego se cancela.
 async function changeStatus(o, status) {
   const wasApplied = !!o.stockApplied;
   const shouldApply = status !== 'cancelado' && status !== 'pendiente';
-  await run(async () => {
+  const ok = await run(async () => {
     if (shouldApply && !wasApplied) await api.adjustStock(o.items, +1);
     if (!shouldApply && wasApplied) await api.adjustStock(o.items, -1);
     await api.updateOrder(o.id, { status, stockApplied: shouldApply });
   }, 'Estado actualizado');
+  if (ok && status === 'listo' && o.customer?.phone) {
+    openModal(`
+      <div class="ready-modal">
+        <div class="ready-icon">✅</div>
+        <h3>Pedido #${esc(o.code)} listo</h3>
+        <p class="muted">${esc(o.customer.name)} recibirá un aviso en la app. ¿Le escribes también por WhatsApp?
+          (le llega aunque tenga la app cerrada)</p>
+        <button class="btn gold block" data-waready="${esc(o.id)}">💬 Avisar por WhatsApp</button>
+        <button class="btn ghost block" data-close style="margin-top:8px">Ahora no</button>
+      </div>`);
+  }
 }
 
 // ------------------------------------------------------------------
@@ -651,6 +766,7 @@ function whatsappText(o) {
 const openWhatsApp = (phone, text) => window.open(`https://wa.me/${encodeURIComponent(phone)}?text=${encodeURIComponent(text)}`, '_blank', 'noopener');
 
 async function submitCheckout(form) {
+  askNotifications(); // se pide durante el toque del usuario
   const f = new FormData(form);
   if (!user.phone || !user.grade) { toast('Completa tu curso y celular en Mi cuenta'); location.hash = '#/cuenta'; return; }
   for (const l of cartLines()) if (l.qty > l.p.stock) return toast(`Stock insuficiente: ${l.p.name}`);
@@ -677,7 +793,7 @@ async function submitCheckout(form) {
     <div style="text-align:center">
       <div style="font-size:4rem">🎉</div>
       <h3>¡Pedido #${esc(order.code)} enviado!</h3>
-      <p class="muted">El multiservicios ya lo puede ver. Sigue el estado en <b>Mis pedidos</b>.</p>
+      <p class="muted">El multiservicios ya lo puede ver. <b>Te avisaremos cuando esté listo</b> para que lo retires.</p>
       <button class="btn gold block" data-watext="${encodeURIComponent(whatsappText(order))}">💬 Avisar también por WhatsApp</button>
       <button class="btn ghost block" data-close style="margin-top:8px">Listo</button>
     </div>`;
@@ -789,18 +905,25 @@ function startData() {
   unsubs.push(api.watchOrders(user, list => {
     if (isAdmin() && !firstOrders) {
       const fresh = list.filter(o => !known.has(o.id) && o.uid !== user.uid);
-      if (fresh.length) toast(`🔔 Nuevo pedido #${fresh[0].code}`);
+      if (fresh.length) {
+        const o = fresh[0];
+        toast(`🔔 Nuevo pedido #${o.code}`);
+        systemNotify('🔔 Nuevo pedido', `#${o.code} · ${o.customer?.name || ''} · ${money(o.total)}`, 'new-' + o.id);
+        alertSound();
+      }
     }
-    if (!isAdmin() && !firstOrders) {
-      list.forEach(o => {
+    if (!firstOrders) {
+      list.filter(o => o.uid === user.uid).forEach(o => {
         const prev = orders.find(x => x.id === o.id);
-        if (prev && prev.status !== o.status) toast(`📦 Pedido #${o.code}: ${STATUS_LABEL[o.status]}`);
+        if (prev && prev.status !== o.status && o.status !== 'listo') toast(`📦 Pedido #${o.code}: ${STATUS_LABEL[o.status]}`);
       });
     }
+    const live = !firstOrders;
     firstOrders = false;
     known = new Set(list.map(o => o.id));
     orders = list;
     render();
+    checkReady(live);
   }));
   if (isAdmin()) unsubs.push(api.watchUsers(list => { users = list; render(); }));
 }
@@ -831,7 +954,7 @@ function applyBranding() {
 // Eventos
 // ------------------------------------------------------------------
 document.addEventListener('click', async e => {
-  const el = e.target.closest('[data-add],[data-open],[data-inc],[data-dec],[data-remove],[data-close],[data-reorder],[data-wa],[data-watext],[data-wacust],[data-cancel],[data-tab],[data-edit],[data-del],[data-newprod],[data-seed],[data-role],[data-logout]');
+  const el = e.target.closest('[data-add],[data-open],[data-inc],[data-dec],[data-remove],[data-close],[data-reorder],[data-wa],[data-watext],[data-wacust],[data-cancel],[data-tab],[data-edit],[data-del],[data-newprod],[data-seed],[data-role],[data-logout],[data-readyok],[data-waready],[data-asknotif]');
   if (!el) return;
   const d = el.dataset;
   if ('add' in d) addToCart(d.add);
@@ -849,9 +972,20 @@ document.addEventListener('click', async e => {
   else if ('watext' in d) openWhatsApp(config.whatsapp, decodeURIComponent(d.watext));
   else if ('wacust' in d) {
     const o = orders.find(x => x.id === d.wacust);
-    const phone = String(o.customer.phone).replace(/\D/g, '').replace(/^0/, '593');
-    openWhatsApp(phone, `Hola ${o.customer.name}, tu pedido #${o.code} de ${config.name} está: *${STATUS_LABEL[o.status]}*.`);
+    openWhatsApp(toIntlPhone(o.customer.phone), o.status === 'listo' ? readyWhatsApp(o)
+      : `Hola ${o.customer.name}, tu pedido #${o.code} de ${config.name} está: *${STATUS_LABEL[o.status]}*.`);
   }
+  else if ('waready' in d) {
+    const o = orders.find(x => x.id === d.waready);
+    if (o) openWhatsApp(toIntlPhone(o.customer.phone), readyWhatsApp({ ...o, status: 'listo' }));
+    closeModal();
+  }
+  else if ('readyok' in d) {
+    local.set(readySeenKey(), [...local.get(readySeenKey(), []), d.readyok].slice(-100));
+    closeModal();
+    checkReady(false);
+  }
+  else if ('asknotif' in d) askNotifications();
   else if ('cancel' in d) {
     if (confirm('¿Cancelar este pedido?')) run(() => api.updateOrder(d.cancel, { status: 'cancelado' }), 'Pedido cancelado');
   }

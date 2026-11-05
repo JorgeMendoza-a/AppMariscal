@@ -1,7 +1,16 @@
 package ec.edu.mariscal.shop;
 
 import android.annotation.SuppressLint;
+import android.Manifest;
 import android.app.Activity;
+import android.app.Notification;
+import android.app.NotificationChannel;
+import android.app.NotificationManager;
+import android.app.PendingIntent;
+import android.content.pm.PackageManager;
+import android.graphics.Color;
+import android.os.Build;
+import android.webkit.JavascriptInterface;
 import android.content.ActivityNotFoundException;
 import android.content.Intent;
 import android.graphics.Bitmap;
@@ -26,6 +35,10 @@ import android.widget.Toast;
 public class MainActivity extends Activity {
 
     private static final int FILE_CHOOSER_REQUEST = 1001;
+    private static final int NOTIF_PERMISSION_REQUEST = 1002;
+    private static final String CHANNEL_ID = "pedidos";
+    private static final String EXTRA_GOTO = "goto";
+    private int notificationId = 1;
     private WebView webView;
     private ValueCallback<Uri[]> fileCallback;
     private final String storeUrl = BuildConfig.STORE_URL;
@@ -85,8 +98,93 @@ public class MainActivity extends Activity {
             }
         });
 
+        createNotificationChannel();
+        webView.addJavascriptInterface(new Bridge(), "AndroidBridge");
+
+        String target = getIntent().getStringExtra(EXTRA_GOTO);
         if (savedInstanceState != null) webView.restoreState(savedInstanceState);
-        else webView.loadUrl(storeUrl);
+        else webView.loadUrl(target != null ? storeUrl + target : storeUrl);
+    }
+
+    @Override
+    protected void onNewIntent(Intent intent) {
+        super.onNewIntent(intent);
+        String target = intent.getStringExtra(EXTRA_GOTO);
+        if (target != null && webView != null) {
+            webView.evaluateJavascript("location.hash='" + target.replace("'", "") + "'", null);
+        }
+    }
+
+    // ---------------- Notificaciones ----------------
+
+    private void createNotificationChannel() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return;
+        NotificationChannel ch = new NotificationChannel(CHANNEL_ID, "Pedidos", NotificationManager.IMPORTANCE_HIGH);
+        ch.setDescription("Avisos cuando tu pedido está listo y pedidos nuevos");
+        ch.enableVibration(true);
+        ch.setVibrationPattern(new long[]{0, 300, 100, 300});
+        ch.enableLights(true);
+        ch.setLightColor(Color.GREEN);
+        getSystemService(NotificationManager.class).createNotificationChannel(ch);
+    }
+
+    private boolean notificationsAllowed() {
+        if (Build.VERSION.SDK_INT >= 33) {
+            return checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED;
+        }
+        return getSystemService(NotificationManager.class).areNotificationsEnabled();
+    }
+
+    private void showNotification(String title, String body) {
+        if (!notificationsAllowed()) return;
+        Intent open = new Intent(this, MainActivity.class);
+        open.putExtra(EXTRA_GOTO, "#/pedidos");
+        open.addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP | Intent.FLAG_ACTIVITY_CLEAR_TOP);
+        PendingIntent pi = PendingIntent.getActivity(this, 0, open,
+                PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+        Notification.Builder b = Build.VERSION.SDK_INT >= Build.VERSION_CODES.O
+                ? new Notification.Builder(this, CHANNEL_ID)
+                : new Notification.Builder(this);
+        b.setSmallIcon(R.drawable.ic_notification)
+                .setColor(Color.parseColor("#0b6b2e"))
+                .setContentTitle(title)
+                .setContentText(body)
+                .setStyle(new Notification.BigTextStyle().bigText(body))
+                .setAutoCancel(true)
+                .setContentIntent(pi);
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) {
+            b.setPriority(Notification.PRIORITY_HIGH).setDefaults(Notification.DEFAULT_ALL);
+        }
+        getSystemService(NotificationManager.class).notify(notificationId++, b.build());
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        if (requestCode == NOTIF_PERMISSION_REQUEST && webView != null) {
+            webView.evaluateJavascript("window.onNotifPermission&&window.onNotifPermission()", null);
+        }
+    }
+
+    /** Funciones que la tienda web puede llamar como window.AndroidBridge.xxx() */
+    private class Bridge {
+        @JavascriptInterface
+        public void notifyUser(String title, String body) {
+            runOnUiThread(() -> showNotification(title, body));
+        }
+
+        @JavascriptInterface
+        public boolean hasPermission() {
+            return notificationsAllowed();
+        }
+
+        @JavascriptInterface
+        public void requestPermission() {
+            if (Build.VERSION.SDK_INT >= 33) {
+                runOnUiThread(() -> requestPermissions(
+                        new String[]{Manifest.permission.POST_NOTIFICATIONS}, NOTIF_PERMISSION_REQUEST));
+            }
+        }
     }
 
     /** Las páginas de la tienda se abren aquí; WhatsApp, teléfono, etc. se abren afuera. */

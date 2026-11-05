@@ -333,3 +333,12 @@ details[open] summary::before { content: '▾ '; }
 
 .apk-btn { margin-top: 14px; background: var(--gold); color: var(--green-900); box-shadow: 0 6px 18px rgba(0,0,0,.2); }
 .apk-btn:hover { background: var(--gold-dark); }
+
+/* Aviso de pedido listo */
+.ready-modal { text-align: center; }
+.ready-modal h3 { color: var(--green-700); font-size: 1.35rem; margin: 6px 0; }
+.ready-icon { font-size: 4.5rem; animation: pop .5s ease-out; }
+.ready-items { background: var(--green-100); border-radius: 12px; padding: 10px; font-size: .85rem; margin: 10px 0; }
+@keyframes pop { 0% { transform: scale(.3); } 70% { transform: scale(1.15); } 100% { transform: scale(1); } }
+.notif-notice { display: flex; align-items: center; gap: 10px; justify-content: space-between; }
+.notif-notice .btn { padding: 6px 14px; flex: 0 0 auto; }
